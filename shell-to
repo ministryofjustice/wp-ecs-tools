@@ -1,0 +1,50 @@
+#!/bin/bash
+set -e
+
+ME=$(basename "$0")
+
+##
+# Shell to a WordPress instance
+# Open an interactive shell on a running WordPress instance.
+##
+
+USAGE="Open an interactive shell on a running WordPress instance.
+
+Usage:
+  $ME <app> <env> [<shell>]
+
+Parameters:
+  <app>      Name of the application.
+  <env>      The environment to connect to [dev|staging|prod]
+  [<shell>]  The shell command to run. Defaults to 'bash'.
+
+Example usage:
+  $ME myappname dev
+"
+
+if [ -z $1 ] || [ -z $2 ]
+then
+	echo "$USAGE"
+	exit 1
+fi
+
+APP=$1
+ENV=$2
+SHELL=$3
+
+# Default $SHELL to bash if none set
+[ ! -z "$SHELL" ] || SHELL="bash"
+
+# Validate $ENV
+[[ "$ENV" =~ ^(dev|staging|prod)$ ]] || ( echo "ENV must be: 'dev', 'staging' or 'prod'. '$ENV' given." && exit 1 )
+
+CLUSTER="wp-$ENV"
+STACK_NAME="$APP-$ENV"
+
+export AWS_DEFAULT_OUTPUT="text"
+
+SERVICE=$(aws cloudformation describe-stack-resource --stack-name $STACK_NAME --logical-resource-id WebService --query 'StackResourceDetail.PhysicalResourceId')
+
+SERVICE_NAME=$(aws ecs describe-services --cluster $CLUSTER --service $SERVICE --query 'services[0].serviceName')
+
+exec $(dirname "$0")/ecs-tools/shell-to-container $CLUSTER $SERVICE_NAME web $SHELL

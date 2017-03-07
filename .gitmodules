@@ -1,0 +1,3 @@
+[submodule "ecs-tools"]
+	path = ecs-tools
+	url = git@github.com:ollietreend/ecs-tools.git
