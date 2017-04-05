@@ -1,0 +1,26 @@
+#!/bin/bash
+if [[ $0 =~ "stop" ]]; then
+	ACTIVE="false"
+else
+	ACTIVE="true"
+fi
+
+echo "What is the app name?"
+read APP_NAME
+
+echo "What is the enviroment name?"
+read ENVIROMENT
+
+PARAMS=`aws cloudformation get-template-summary --stack-name "$APP_NAME-$ENVIROMENT" --output text --query "Parameters[*].ParameterKey"`
+
+CF_PARAMS=""
+
+for PARAM in $PARAMS; do
+	if [ $PARAM = 'Active' ]; then
+		CF_PARAMS="$CF_PARAMS ParameterKey=$PARAM,ParameterValue=$ACTIVE"
+	else
+		CF_PARAMS="$CF_PARAMS ParameterKey=$PARAM,UsePreviousValue=true"
+	fi
+done
+
+aws cloudformation update-stack --stack-name "$APP_NAME-$ENVIROMENT" --use-previous-template --parameters $CF_PARAMS --capabilities CAPABILITY_IAM
