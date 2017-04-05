@@ -38,7 +38,13 @@ SHELL=$3
 # Validate $ENV
 [[ "$ENV" =~ ^(dev|staging|prod)$ ]] || ( echo "ENV must be: 'dev', 'staging' or 'prod'. '$ENV' given." && exit 1 )
 
-CLUSTER="wp-$ENV"
+if [ "$ENV" = "prod" ]
+then
+	CLUSTER="wp-production"
+else
+	CLUSTER="wp-$ENV"
+fi
+
 STACK_NAME="$APP-$ENV"
 
 export AWS_DEFAULT_OUTPUT="text"
