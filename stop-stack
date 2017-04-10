@@ -1,15 +1,44 @@
 #!/bin/bash
+set -e
+
+ME=$(basename "$0")
+
+##
+# Stop/start a WordPress instance
+# Stop or start a WordPress instance by changing the 'Active' parameter on the CloudFormation stack.
+##
+
+USAGE="Stop/start a WordPress instance.
+
+Usage:
+  $ME <app> <env>
+
+Parameters:
+  <app>      Name of the application.
+  <env>      The environment to connect to [dev|staging]
+
+Example usage:
+  $ME myappname dev
+"
+
+if [ -z $1 ] || [ -z $2 ]; then
+	echo "$USAGE"
+	exit 1
+fi
+
 if [[ $0 =~ "stop" ]]; then
 	ACTIVE="false"
 else
 	ACTIVE="true"
 fi
 
-echo "What is the app name?"
-read APP_NAME
+APP_NAME=$1
+ENVIROMENT=$2
 
-echo "What is the enviroment name?"
-read ENVIROMENT
+if [ "$ENVIROMENT" != "dev" ] && [ "$ENVIROMENT" != "staging" ]; then
+	echo "Invalid <env> value. Allowed values: dev, staging"
+	exit 1
+fi
 
 PARAMS=`aws cloudformation get-template-summary --stack-name "$APP_NAME-$ENVIROMENT" --output text --query "Parameters[*].ParameterKey"`
 
