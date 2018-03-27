@@ -1,0 +1,60 @@
+#!/bin/bash
+set -e
+
+ME=$(basename "$0")
+
+##
+# Enable/disable maintenance mode on a WordPress instance
+# Enable or disable maintenance mode by changing the 'MaintenanceMode' parameter on the CloudFormation stack.
+##
+
+USAGE="Enable/disable maintenance mode on a WordPress instance.
+
+Usage:
+  $ME <app> <env>
+
+Parameters:
+  <app>       Name of the application.
+  <env>       The environment to connect to [dev|staging|prod]
+  <whitelist> Comma-separated list of IP addresses to whitelist from maintenance mode.
+
+Example usage:
+  $ME myappname dev 9.9.9.9,10.10.10.10
+"
+
+if [ -z $1 ] || [ -z $2 ]; then
+	echo "$USAGE"
+	exit 1
+fi
+
+if [[ $0 =~ "enable" ]]; then
+	MAINTENANCE_MODE="1"
+	WHITELIST_IPS=$3
+else
+	MAINTENANCE_MODE="0"
+	WHITELIST_IPS=""
+fi
+
+APP_NAME=$1
+ENVIRONMENT=$2
+
+if [ "$ENVIRONMENT" != "dev" ] && [ "$ENVIRONMENT" != "staging" ] && [ "$ENVIRONMENT" != "prod" ]; then
+	echo "Invalid <env> value. Allowed values: dev, staging, prod"
+	exit 1
+fi
+
+PARAMS=`aws cloudformation get-template-summary --stack-name "$APP_NAME-$ENVIRONMENT" --output text --query "Parameters[*].ParameterKey"`
+
+CF_PARAMS=""
+
+for PARAM in $PARAMS; do
+	if [ $PARAM = 'MaintenanceMode' ]; then
+		CF_PARAMS="$CF_PARAMS ParameterKey=$PARAM,ParameterValue=$MAINTENANCE_MODE"
+	elif [ $PARAM = 'MaintenanceWhitelistIps' ]; then
+		CF_PARAMS="$CF_PARAMS ParameterKey=$PARAM,ParameterValue=\"$WHITELIST_IPS\""
+	else
+		CF_PARAMS="$CF_PARAMS ParameterKey=$PARAM,UsePreviousValue=true"
+	fi
+done
+
+aws cloudformation update-stack --stack-name "$APP_NAME-$ENVIRONMENT" --use-previous-template --parameters $CF_PARAMS --capabilities CAPABILITY_IAM
